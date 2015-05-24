@@ -1,0 +1,86 @@
+---
+title: "Exploratory Analysis of the Effect of Vitamin C on Tooth Growth"
+author: "Asa Downs"
+output: html_document
+---
+
+##Introduction
+An exploratory data analysis of the "ToothGrowth" dataset in R was performed. From the documentation: "The response is the length of odontoblasts (teeth) in each of 10 guinea pigs at each of three dose levels of Vitamin C (0.5, 1, and 2 mg) with each of two delivery methods (orange juice or ascorbic acid)." Our goal was twofold: 
+
+1. To examine the null hypothesis that, in the case of both orange juice and ascorbic acid, tooth growth was not linked to increased concentrations of vitamin C. 
+2. To examine the null hypothesis that the delivery method of Vitamin C did not matter.
+##Analysis
+We used the dplyr package for data manipulation. We first plotted tooth growth by supplement type and used a smooth line to get an idea of the overall increase in tooth growth based on vitamin C dosage. 
+```{r setup, message=FALSE, warning=FALSE}
+library('ggplot2')
+library('dplyr')
+toothGrowth <- tbl_df(ToothGrowth)
+```
+We next wanted to examine the hypothesis that tooth growth was linked to increasing concentrations of vitamin C as indicated by our plot (shown below). We perform several T-tests to see how confident we could be in these conclusions. With only ten samples we want to be sure that the difference we observe is not the result of chance. Therefore we initially use a confidence interval of 99%.
+```{r plot, message=FALSE, warning=FALSE, fig.height=3, echo=FALSE}
+ggplot(toothGrowth, aes(x=dose,y=len))+facet_wrap(~supp) + geom_point() + geom_smooth(method='loess') + ggtitle('ToothGrowth Data: Length vs Dose by type of supplement') + xlab('Dose') + ylab('Length')
+```
+First we divide the data into the orange juice and ascorbic acid data sets. We then compare the 0.5mg dose group with the 1.0mg dose group and the 1.0mg dose group with the 2.0mg dose group for both orange juice and ascorbic acid to see if all results are significant using a 99% confidence interval. 
+
+These calculations are shown below. Boxplots for orange juice are shown to help visualize the resulting data. In all cases except orange juice with a dose increasing from 1.0 to 2.0, we can reject the null hypothesis and conclude an increase in vitamin C dose in these cases is associated with a statistically significant increase in mean tooth length.
+
+In the case, of orange juice with concentration increasing from 1.0 to 2.0 we cannot reject the null hypothesis at 99% confidence interval but we can reject it at a 95% confidence interval and suggest that although it may be small we can be at a 95% confidence interval suggest an increase in vitamin C dosage is associated with an increase in mean tooth length, of some size.
+
+```{r growth}
+oj0.5to1.0 <- toothGrowth %>% filter((dose==0.5 | dose==1.0) & supp=='OJ')
+vc0.5to1.0 <- toothGrowth %>% filter((dose==0.5 | dose==1.0) & supp=='VC')
+oj1.0to2.0 <- toothGrowth %>% filter((dose==2.0 | dose==1.0) & supp=='OJ')
+vc1.0to2.0 <- toothGrowth %>% filter((dose==2.0 | dose==1.0) & supp=='VC')
+```
+```{r growthplot, fig.height=3, echo=FALSE}
+par(mfrow=c(1,2),oma = c(0, 0, 2, 0))
+with(oj0.5to1.0,boxplot(len~dose,xlab='Dose',ylab='Length'))
+with(oj1.0to2.0,boxplot(len~dose,xlab='Dose',ylab='Length'))
+mtext('Orange Juice by Dose',outer=TRUE, cex=1.5)
+```
+Next we want to see if there is any difference between orange juice and ascorbic acid in terms of tooth length at similar dosages of vitamin C. To do this we compare tooth length at each of the three dose levels 0.5, 1.0, and 2.0mg between orange juice and ascorbic acid. As our t-test data and boxplot data shows at doses of 0.5mg to 1.0mg of vitamin C orange juice results in longer teeth than ascorbic acid. At 2.0mg with a p-value of 0.9639 there is very little difference in the means of orange juice and ascorbic acid in this case we cannot reject the null hypothesis.
+
+```{r method}
+dose0.5 <- toothGrowth %>% filter(dose==0.5)
+dose1.0 <- toothGrowth %>% filter(dose==1.0)
+dose2.0 <- toothGrowth %>% filter(dose==2.0)
+```
+```{r methodplot,fig.height=2}
+par(mfrow=c(1,3),oma = c(0, 0, 2, 0))
+with(dose0.5,boxplot(len~supp, main='0.5',xlab='Supplement',ylab='Length'))
+with(dose1.0,boxplot(len~supp, main='1.0',xlab='Supplement',ylab='Length'))
+with(dose2.0,boxplot(len~supp, main='2.0',xlab='Supplement',ylab='Length'))
+mtext('Supplement Type',outer=TRUE, cex=1.5)
+```
+##Conclusions
+First we examined the effects of increasing amounts of vitamin C in orange juice and ascorbic acid supplements. Based on the analysis of the data we can accept the alternative hypothesis that an increase from 0.5mg to 1.0mg is associated with an increase in guinea pig tooth length. From 1.0mg to 2.0mg we can accept the alternate hypothesis if the supplement is ascorbic acid. In cases where the supplement is orange juice the data is less clear and we can only reject the null hypothesis using a 95% confidence interval.
+
+Next we examined the effects of delivering the vitamin C at different doses via the two different supplement types (orange juice and ascorbic acid). In the case of the 0.5mg and 1.0mg dose we can accept the alternative hypothesis that orange juice results in greater mean tooth length for the same amount of vitamin C. At the 2.0 mg dosage we accept the null hypothesis.
+
+Although this data analysis was simply exploratory we can feel confident supporting a relationship between Vitamin C and increased mean tooth length in guinea pigs. We can also suggest at dosages of vitamin C of 1.0mg or less orange juice is more conducive to tooth growth than ascorbic acid.
+
+##Concerns
+
+The following assumptions were made:
+
+* The data was normally distributed at supplement/type level.
+* The two populations of guinea pigs were identical except for the type and dose of supplement received. 
+* The 10 guinea pigs in each of the 6 dose/supplement cells were different guinea pigs. 
+* The researchers were blinded and followed best available practices for gathering the data and that the data they recorded is accurate.
+
+Additionally, in the absence of a control group who received no supplement we are only able to look at the increase in tooth growth as a result of increasing vitamin C growth from 0.5mg to 2.0mg not compare tooth growth in the absence and presence of a vitamin C supplement.
+
+##Appendix
+
+```{r ttest}
+#T-tests for length vs. dose
+t.test(len ~ dose, data=oj0.5to1.0, conf.level=0.99)
+t.test(len ~ dose, data=vc0.5to1.0, conf.level=0.99)
+t.test(len ~ dose, data=oj1.0to2.0, conf.level=0.99)
+t.test(len ~ dose, data=vc1.0to2.0, conf.level=0.99)
+t.test(len ~ dose, data=oj1.0to2.0, conf.level=0.95)
+#T-tests for length vs. supplement type
+t.test(len ~ supp, data=dose0.5, conf.level=0.99)
+t.test(len ~ supp, data=dose1.0, conf.level=0.99)
+t.test(len ~ supp, data=dose2.0, conf.level=0.99)
+```
